@@ -8,4 +8,4 @@ build:
 		@go build  -o Supply-chain-security cmd/Supply-chain-security/main.go
 release: 
 		
-		LDFLAGS=goreleaser release --clean 
+		goreleaser release --clean 
