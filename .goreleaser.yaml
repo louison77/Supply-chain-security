@@ -1,0 +1,147 @@
+project_name: Supply-chain-security #Need to change this name by your project name
+
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=1
+  - LATEST_TAG=,latest
+
+# Prevents parallel builds from stepping on each others toes downloading modules
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+
+
+gitlab_urls:
+  api: "{{ .Env.CI_API_V4_URL }}"
+  download: "{{ .Env.CI_SERVER_URL }}"
+  skip_tls_verify: true
+  use_package_registry: true
+# Generate SBOM for all artifacts
+sboms:
+  - id: binary sbom
+    artifacts: binary
+    documents:
+      - "${artifact}.spdx.sbom"
+  - id: package sbom
+    artifacts: package
+    documents:
+      - "${artifact}.spdx.sbom"
+# Build the binary in differents architecture
+builds:
+  - id: linux
+    binary: '{{ .ProjectName }}-linux-{{ .Arch }}_{{ .Version }}'
+    no_unique_dist_dir: true
+    main: ./cmd/{{ .ProjectName }}/main.go
+    
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
+nfpms:
+  - id: '{{ .ProjectName }}'
+    package_name: '{{ .ProjectName }}'
+    file_name_template:  "{{ .ConventionalFileName }}"
+    license: "Apache License 2.0"
+    maintainer: ""
+    builds:
+      - linux
+    formats:
+        - apk
+        - deb
+        - rpm
+    contents:
+        - src: /usr/bin/{{ .ProjectName }}-linux-{{ .Arch }}_{{ .Version }}
+          dst: /usr/bin/{{ .ProjectName }}
+          type: "symlink"
+
+
+# Define caracteristics of binary artifacts
+archives:
+  - id: binary
+    format: binary
+    name_template: "{{ .Binary }}" 
+    allow_different_binary_count: true
+  - id: zip
+    format: zip
+    name_template: "{{ .Binary }}" 
+    allow_different_binary_count: true
+  - id: tar
+    format: tar.gz
+    name_template: "{{ .Binary }}" 
+    allow_different_binary_count: true
+# create metadata file
+metadata:
+  
+  mod_timestamp: "{{ .CommitTimestamp }}"
+
+
+# Checksum caracteristics
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+# Snapshot caracteristics
+snapshot:
+  name_template: SNAPSHOT-{{ .ShortCommit }}
+
+# Sign the artifacts
+signs:
+  - id : '{{ .ProjectName }}-keyless'
+    cmd: cosign
+    env:
+      - COSIGN_EXPERIMENTAL=1
+    signature : "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "-y"
+      - "${artifact}"   
+    artifacts: binary
+    output: true
+  - id : checksum-keyless
+    cmd: cosign
+    env:
+      - COSIGN_EXPERIMENTAL=1
+    signature : "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "-y"
+      - "${artifact}"   
+    artifacts: checksum
+    output: true
+  - id : package-keyless
+    cmd: cosign
+    env:
+      - COSIGN_EXPERIMENTAL=1
+    signature : "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "-y"
+      - "${artifact}" 
+    artifacts: package
+    output: true
+  
+
+# Create a release 
+release:
+  draft: true
+  replace_existing_draft: true
+  make_latest: true
+  github:
+    owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
+    name: '{{ .ProjectName }}'
+  gitlab:
+    owner: ""
+    name: "{{ .Env.CI_PROJECT_PATH }}"
+  footer: |
+    ### Thanks to all contributors!
