@@ -1,0 +1,31 @@
+name: goreleaser
+
+on:
+  pull_request:
+  push:
+    # run only against tags
+    tags:
+      - "*"
+
+
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.3.0
+      - name: Run GoReleaser
+        run: |
+         curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+         make release
+        env:
+            GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
