@@ -25,6 +25,7 @@ jobs:
         uses: sigstore/cosign-installer@v3.3.0
       - name: Run GoReleaser
         run: |
+         go install github.com/goreleaser/goreleaser@latest
          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
          make release
         env:
