@@ -1,4 +1,4 @@
-project_name: Supply-chain-security #Need to change this name by your project name
+project_name: Supply-chain-security
 
 env:
   - GO111MODULE=on
@@ -23,10 +23,17 @@ sboms:
     artifacts: binary
     documents:
       - "${artifact}.spdx.sbom"
-  - id: package sbom
-    artifacts: package
+  - id: CycloneDX sbom
+    artifacts: binary
     documents:
-      - "${artifact}.spdx.sbom"
+      - "${artifact}.cyclonedx-json.sbom"
+    args: ["$artifact", "--output", "cyclonedx-json","--file","$document"]
+  - id: trivy sbom
+    artifacts: binary
+    cmd: trivy
+    documents:
+      - "${artifact}.cyclonedx-vex.sbom"
+    args: ["fs","--format","cyclonedx","--scanners","vuln","--output","$document","{{ .Env.WORKSPACE }}"]
 # Build the binary in differents architecture
 builds:
   - id: linux
@@ -127,6 +134,20 @@ signs:
       - "-y"
       - "${artifact}" 
     artifacts: package
+    output: true
+  - id : 'sbom-keyless'
+    cmd: cosign
+    env:
+      - COSIGN_EXPERIMENTAL=1
+    signature : "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "-y"
+      - "${artifact}"
+    artifacts: sbom
     output: true
   
 

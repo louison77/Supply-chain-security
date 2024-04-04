@@ -27,6 +27,7 @@ jobs:
         run: |
          go install github.com/goreleaser/goreleaser@latest
          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+         curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.49.1
          make release
         env:
             GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
