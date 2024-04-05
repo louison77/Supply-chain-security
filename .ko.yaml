@@ -1,0 +1,6 @@
+builds:
+- dir: .
+  main: ./cmd/supply-chain-security
+  env:
+  - CGO_ENABLED=0
+
