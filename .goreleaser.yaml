@@ -153,8 +153,6 @@ signs:
 
 # Create a release 
 release:
-  draft: true
-  replace_existing_draft: true
   make_latest: true
   github:
     owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
